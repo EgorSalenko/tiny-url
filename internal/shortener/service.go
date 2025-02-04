@@ -59,7 +59,7 @@ func (r *Service) Hash(ctx context.Context, url string) (*storage.Tiny, error) {
 
 func (r *Service) GetUrlByHash(ctx context.Context, hash string) (url string, err error) {
 	raw, err := r.storage.Get(ctx, hash)
-	data := storage.Tiny{}
+	var data storage.Tiny
 	err = json.Unmarshal([]byte(raw), &data)
 	if err != nil {
 		return
