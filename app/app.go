@@ -3,20 +3,26 @@ package app
 import (
 	"github.com/EgorSalenko/tiny/internal/handlers"
 	"github.com/EgorSalenko/tiny/internal/shortener"
-	"github.com/EgorSalenko/tiny/internal/storage"
+	"github.com/EgorSalenko/tiny/storage"
+	"github.com/rs/zerolog/log"
 )
 
 type App struct {
 	Routes *routes
 }
 type routes struct {
-	UrlHandler *handlers.UrlHandler
+	ShortnerHandler *handlers.UrlHandler
 }
 
 func New() *App {
 	redis := storage.NewStorage()
+	_, err := redis.Ping()
+	if err != nil {
+		log.Error().Err(err).Msg("failed to connect to redis")
+		return nil
+	}
 	return &App{
-		Routes: initHandlers(initServices(initRepositories(redis))),
+		Routes: initRoutes(initServices(redis)),
 	}
 }
 
@@ -24,25 +30,13 @@ type services struct {
 	shortener *shortener.Service
 }
 
-type repositories struct {
-	shortener shortener.Repository
-}
-
-func initRepositories(storage *storage.Storage) *repositories {
-	return &repositories{
-		shortener: shortener.NewRepository(storage),
-	}
-}
-
-func initServices(r *repositories) services {
+func initServices(storage *storage.Storage) services {
 	return services{
-		shortener: shortener.NewService(r.shortener),
+		shortener: shortener.NewService(storage),
 	}
 }
 
-func initHandlers(s services) *routes {
-	urlHandler := handlers.NewUrlHandler(s.shortener)
-	return &routes{
-		UrlHandler: urlHandler,
-	}
+func initRoutes(s services) *routes {
+	shortnerHandler := handlers.NewShortnerHandler(s.shortener)
+	return &routes{ShortnerHandler: shortnerHandler}
 }
